@@ -1,0 +1,1127 @@
+\documentclass[9pt,letterpaper]{article}    
+%\usepackage[utf8]{inputenc} % to manage accents in french
+\usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{amsmath,amsthm,amssymb,bbm} %math stuff
+\usepackage{ctable} % tables
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\usepackage{longtable}
+\usepackage{spverbatim}
+
+  
+% my commands
+\newcommand{\nd}{\noindent}
+
+\newcommand*\sepline{%
+   \begin{center}
+     \rule[1ex]{.5\textwidth}{.5pt}
+   \end{center}}
+    
+% Define the format of the report
+\renewcommand{\headrulewidth}{0.0pt}
+\renewcommand{\footrulewidth}{0.0pt}
+\setlength{\textheight}{9.00in}
+\setlength{\textwidth}{7.00in}
+\setlength{\topmargin}{-0.5in}
+\setlength{\evensidemargin}{-0.25in}
+\setlength{\oddsidemargin}{-0.25in}
+\setlength{\headheight}{15pt}
+\renewcommand{\baselinestretch}{1.2}
+\makeatletter
+\makeatother
+%\lfoot{} \cfoot{ } \rfoot{{\small{\em Page \thepage \ of \pageref{LastPage}}}}
+
+\SweaveOpts{width=7,height=3}    
+<<echo=false>>=
+options(SweaveHooks=list(fig=function()par(mar=c(1, 1, 1, 1))))
+@
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+\pagestyle{fancy}
+\setkeys{Gin}{width=0.5\textwidth}
+
+
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+            
+        \Huge
+        \includegraphics[width=0.4\textwidth]{hec}
+            
+        \vspace{0.5cm}
+        \LARGE
+        Travail de session : Statistiques spatiales
+            
+        \vspace{5cm}
+        
+        \textbf{1 Avril 2020} \\
+            
+        Jean-Philippe Boutin - 9532697 \\
+        Paul Conerardy - 11206073
+                 
+            
+        \vfill
+            
+        
+            
+        \vspace{0.8cm}
+            
+        
+        \sepline    
+        \Large
+        80-619: Méthodes avancées en exploitation de données\\
+        Maîtrise en gestion (M. Sc.) – Intelligence d'affaires\\
+        Professeur(e)s : Aurélie Labbé et Denis Larocque
+        \sepline
+            
+    \end{center}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\nd En statistiques spatiales, les données sont collectées en des lieux dont on a relevé la position géographique dans le but d'utiliser cette information spatiale dans la modélisation statistique. En particulier, on cherche à modéliser ce que l'expérience courante nous enseigne : deux données rapprochées géographiquement tendent à être similaires en valeur. Cette modélisation nous permettra de réaliser des prédictions spatiales ou de tester des hypothèses en intégrant explicitement cette dépendance spatiale dans les calculs. (Denis Allard, 2012)
+
+\section{Présentation du sujet}
+
+\nd Les statistiques spatiales répondent au type de questions suivantes : étant donné un nombre limité d'échantillons de sols pour des concentrations de métaux lourds d'un ancien site industriel de Montréal, qu'elles sont les endroits les plus pollués et qu'elle est la moyenne de pollution du site ? Est-ce que la distribution du nerprun cathartique (arbuste exotique envahissant) est aléatoire dans le parc Mont-Royal, et si non est-ce que sa distribution dépend de facteurs comme l'humidité dans le sol, l'ensoleillement ? À Montréal, est-ce que la stratégie de gestion du recyclage des différentes des mairies d'arrondissement est influencée par les arrondissements voisins ou est-elle indépendante ?
+
+\nd Fondés par des chercheurs préoccupés par des enjeux concrets forestier, minier et de l'épidémiologie, ils ont adapté les modèles statistiques classiques à des modèles tenant compte de la dépendance géographique des données. Ce vaste sous-ensemble de la statistique a explosé depuis les années 60. 
+
+\nd Les statistiques spatiales réfèrent à l'application de concepts et méthodes statistiques à des données ayant une structure spatiale explicite en 2 ou 3 dimensions. Intuitivement, on peut comprendre qu'une plus forte corrélation existe entre des échantillons de sol (concentration de zinc par exemple) situés proche les uns des autres. La première étape des analyses statistiques est souvent d'identifier cette structure de corrélation/relation dans l'espace avant de pouvoir faire des analyses plus approfondies.
+
+\nd Plusieurs champs d'applications utilisent des méthodes de statistiques spatiales dans le traitement et l'analyse de leurs données:  l'agriculture, la géologie, la science des sols, l'hydrologie, l'écologie, l'industrie minière, la foresterie, la qualité de l'air, la télédétection, les études sociales/économiques, l'épidémiologie .
+
+\nd L'effervescence de ces différents champs d'application, les différentes méthodes utilisées pour analyser les différents types de données spatiales et les enjeux liés à la manipulation des données spatiales sont à priori un défi pour le néophyte en statistiques spatiales. En effet, Bivand sur le site du CRAN répertorie plus de 185 librairies R sur les statistiques spatiales , l'un de ces librairies d'analyse spdep déploient plus de 2000 fonctions et 1600 pages de documentation. 
+
+\nd Étant donné l'étendue du sujet traité, ce tutoriel ne va présenter qu'un aperçu des statistiques spatiales en fonction de 3 principaux types de données spatiales, de leurs méthodes et ressources respectives en R. 
+Dans le contexte de ce tutoriel, nous n'allons pas couvrir les méthodes et librairies pour importer et exporter les objets spatiaux, ni traiter la manière de projeter ou représenter les données spatiales en 2 dimensions sur une sphère comme la Terre, ni les librairies d'aide à la visualisation et la cartographie.
+
+\section{Revue de littérature}
+
+\subsection{Introduction/sources générales}
+L'article de Getis, Spatial Statistics  peut servir d'orientation aux statistiques spatiales : de l'historique du domaine, des différentes catégories d'analyses, des enjeux et des tendances futures. 
+Deux ouvrages clés ont recensé le domaine des statistiques spatiales et semble être abondamment référencés dans la littérature :
+
+\begin{itemize}
+  \item Le livre Statistics for Spatial Data  de Cressie (1993) est un ouvrage phare du domaine et est encore d'actualité car il a su définir et catégoriser ce vaste domaine en trois branches majeures (données ponctuelles, données latticielles et données géostatistiques). Cette catégorisation est encore utilisée par plusieurs auteurs et nous la reprenons pour structurer ce tutoriel. 
+  \item Un deuxième ouvrage important et plus récent est le Handbook of Spatial Statistics (Gelfand, Diggle, Guttorp, Montserrat 2010) . L'ouvrage est exhaustif et tout en reprenant la structure de Cressie actualise l'état des connaissances dans chacune des branches des statistiques spatiales. De plus, l'ouvrage traite également de la perspective spatio-temporelle.
+\end{itemize}
+
+Alternativement, des notes de cours  d'un cours avancé de statistiques spatiales à l'Université de Pennsylvanie (Smith 2020) sont très complètes, récentes et accessible en ligne sans droit d'accès. Encore une fois, la structure du document emprunte l'approche familière de Cressie.
+Geospatial Analysis (De Smith, Goodchild, Longley - 2018)– Un guide exhaustif que l'on retrouve en version web  ou en format livre  , est une excellente ressource complète et à jour des objets spatiaux ainsi que des méthodes de traitements statistiques. Son traitement intégré du champ d'étude (par opposition à l'approche de catégorisation de Cressie) implique une bonne connaissance de base avant de traiter de problème précis.
+Finalement, on peut retrouver des articles à la fine pointe du domaine dans le journal académique Spatial Statistics  .
+
+\subsection{Branches majeures des statistiques spatiales}
+
+Les ressources de la section précédente sont exhaustives et décrivent bien les branches majeures du domaine. Cependant, si notre question de recherche est bien identifiée ainsi que le type de données utilisées, on peut concentrer nos efforts de recherche sur la branche des statistiques spatiales la plus pertinente. 
+
+\subsubsection{Type de données ponctuelles (spatial point patterns)}
+Pour ce type de données, la localisation des points dans une zone est l'objet de l'étude. On peut se demander si la répartition d'une espèce d'arbres dans une forêt est régulière ou présente des agrégats ?
+Gimond (2019) dans Point Pattern Analysis , fait l'inventaire des différentes méthodes d'analyses des données ponctuelles (centrographie, étude de la densité dont l'approche quadrat, analyse de la distance entre les points dont les plus proches voisins et les fonction K et L) ainsi que l'impact des effets de premier et deuxième ordre. 
+
+\subsubsection{Type de données latticielles (lattice and areal unit data)}
+Les données latticielles représentent un nombre fini d'unité géographique (hauteur des arbres d'une forêt dans le parc Lafontaine, distribution de l'âge dans les arrondissements de Montréal, pixels dans une image). Les données qui représentent une unité sont des valeurs agrégés (moyenne de l'âge de la population).
+Le chapitre Areal Data Analysis  du livre Notebook for Spatial Data Analysis est une description de ce type de données et donne quelques exemples de cartes.
+
+\subsubsection{Type de données géostatistiques (continuous spatial variation data)}
+Les données géostatistiques sont des données qui peuvent être interpolées à partir de quelques échantillons. L'article en français de Gabriel (2010)  est une bonne introduction aux aspects théoriques des données géostatistiques.
+Ce mémoire  de maîtrise (Baillargeon 2005) de l'Université Laval fait un bon recensement du krigeage, une des principales méthodes d'interpolation spatiale, alors que cette page web  est une bonne introduction à cette méthode. 
+
+\subsection{Des références pour quelques domaines d'application}
+
+\subsubsection{Écologie}
+Selon Moat (2015), "Spatial Analysis: A Guide for Ecologists (Dale, Fortin, 2014)  est un excellent ouvrage de référence pour un statisticien aguerri ou pour un étudiant en écologie.
+\subsubsection{Géosciences}
+Le propos de l'article Machine Learning for the Geosciences: Challenges and Opportunities (Karpatne et al, 2017) dépasse largement notre champ d‘intérêt mais à l‘avantage de faire une recension des sources de données et des défis. L‘article fait également état du potentiel des techniques d'apprentissage automatique et inclut une longue bibliographie. 
+\subsubsection{Épidémiologie}
+Selon Choi(2013) , le livre Spatial Analysis in epidemiology (Pfeiffer et al, 2008)  est une excellente introduction aux spécificités des enjeux épidémiologique liés aux analyses spatiales mais il exige un niveau de connaissance équivalent à un deuxième cycle universitaire en statistiques.
+
+\nd Un article de Souris  et Bichaud (2011) décrit des approches d'analyse statistique de données ponctuelles bivariées à l'aide de méthode de Moran, Pearson, du plus proche voisin et de simulation Monte-Carlo.
+
+\section{Méthodes}
+\subsection{Modèle spatial général}
+
+Les méthodes de statistiques spatiales servent à décrire, modéliser des données géo-référencées ou localisées. 
+
+La particularité principale des statistiques spatiales est que l'hypothèse d'indépendance des données n'est pas valide., Les données spatiales sont généralement corrélées spatialement surtout pour des données proches les unes des autres. L'identification de ces corrélations est souvent l'objectif initiale de l'analyse statistique. 
+
+Étant donné l'autocorrélation des données en au moins deux dimensions, les méthodes statistiques inférentielles classiques ne sont plus valables. Il faut donc des outils spécifiques permettant de tenir compte de l'autocorrélation spatiale dans nos analyses statistiques et d'éviter que celles-ci n'introduisent des biais dans l'estimation des paramètres.
+
+Le modèle suivant décrit par Cressie (1993) est un modèle spatiale générale qui tient compte de la possibilité que les données soient continues ou discrètes et la position des données peut être régulières ou irrégulières. 
+
+Supposons que $s$ $\in$ $\mathbb{R}^{d}$ est une location générique dans un espace de dimension et supposons qu'une observation Z(s) à cette espace est une quantité aléatoire. 
+
+\begin{center}
+$ {\mathbb{Z}(s); s \in \mathbb{D}} $
+\end{center}
+
+Une catégorisation reprise par de nombreux auteurs dont Diggle et Bivand, Cressie (1993) distingue trois types de données, selon la nature du domaine D, appelant des traitements statistiques spécifiques : les données ponctuelles, les données latticielles et les données géostatiques. 
+
+\subsection{Données ponctuelles (point pattern analysis)}
+
+Des données ponctuelles sont un "processus de points" (ou "point pattern") qui représente la position ou les coordonnées de différents évènements au sein d'une région prédéfinie. La localisation spatiale des points est l'objet de l'étude. Par exemple, une question centrale lors de l'étude de la répartition spatiale d'une espèce d'arbres dans une forêt est de savoir si la répartition est plutôt régulière, aléatoire ou si elle présente des agrégats de points.  La répartition pourra également être analysée en fonction de covariables comme l'altitude des arbres de notre forêt. 
+
+\textbf{Type de distribution - Processus groupés et ordinaires} 
+\nd D'autres types de processus de points existent et peuvent généralement être catégorisés comme groupés, dans lesquels les points auront tendance à être plus proches les uns des autres, ou ordinaires/réguliers, dans lesquels les points auront tendance à être plus espacés les uns des autres. 
+Voici quelques méthodes pour analyser la répartition des points dans une région :
+
+\textbf{Intensité}
+\nd L'approche par intensité revient à calculer la densité moyenne de points dans un espace, soit l'intensité (le nombre de points divisés par l'aire de la région). Cette intensité peut ainsi être constante (uniforme) ou non.
+La méthode d'estimation par quadrat permet de vérifier la façon dont la densité varie à travers la région à l'étude en divisant l'espace en plusieurs sous-espaces.
+
+\textbf{Distribution des plus-proches voisins}
+\nd Une autre façon de déterminer le regroupement ou l'intensité d'un processus de points est de considérer chaque point et comment il se rapporte aux autres. Une mesure de cela est la distribution des distances de chaque point par rapport à son plus proche voisin.
+La fonction de distribution cumulée G(r) correspond à la probabilité de trouver un plus proche voisin dans une distance r. 
+
+\subsection{Les données latticielles (discrete spatial variation, including lattice and areal unit data)}
+
+Si les données ponctuelles sont principalement représentées comme des points dans une région à l'étude, les données latticielles correspondent à des données agrégées pour chaque partition spatiale d'une région. Les données latticielles seront principalement représentées comme des polygones, pour autant l'on cherche toujours à déterminer si des données géographiquement proches tendent à être similaires en valeur. Comme on vient à utiliser ici des polygones, l'on peut s'intéresser aux relations entre les polygones adjacents d'une région.
+
+\textbf{Critères d'adjacence et matrices de poids spatiaux}
+\nd L'on peut considérer que deux zones sont adjacentes si elles partagent un même côté. C'est ce qui est appelé le critère Rook, dans l'exemple ci-dessous A1 et A2 seraient adjacents mais pas A2 et A4. Le critère Queen va lui permettre l'adjacence de façon diagonale, A2 et A4 seraient donc adjacents mais toujours pas A2 et A6.
+
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.1]{Adj.png}
+\end{center}
+\end{figure}
+
+
+Pour pouvoir utiliser cette information plus facilement, on peut la représenter comme un vecteur de valeurs binaires qui fera office de poids pour vérifier l'adjacence de deux polygones soit par exemple pour A1, les polygones A2 et A4 sont adjacents et on donc une valeur de 1 dans le vecteur de poids w1:
+
+\begin{itemize}
+  \item Critère Rook :  w1 = [0,1,0,1,0,0]
+  \item Critère Queen : w1 = [0,1,0,1,1,0]
+\end{itemize}
+
+\nd Si l'on fait la même chose pour tous les polygones de la région, l'on obtient finalement une matrice de poids.
+Pour ce type de données spatiales, l'objectif est de déterminer si des données géographiquement proches tendent à être similaires en valeur. Comme on vient à utiliser ici des polygones, l'on peut s'intéresser aux relations entre les polygones adjacents d'une région. Voici trois méthodes utilisées pour ce type de problématique:
+
+\textbf{Moyenne spatiale mobile et proximité}
+\nd La moyenne spatiale mobile est une variation de la moyenne qui sera calculée en prenant en considération les valeurs des polygones adjacents au polygone considéré. La moyenne spatiale mobile nous offre déjà une première représentation du phénomène d'autocorrélation spatiale, ce qui signifie que la valeur d'une variable n'est pas indépendante de la valeur de cette même variable dans les régions voisines.
+
+\textbf{Autocorrélation spatiale et coefficient I de Moran}
+
+\nd Le coefficient I de Moran ressemble fortement à un calcul de corrélation mais qui permet ici d'intégrer l'influence des polygones adjacents et est définit comme ceci :
+
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.2]{MoranI.png}
+\end{center}
+\end{figure}
+
+
+Ou N est le nombre d'unités spatiales indexées par i and j; x est la variable d'intérêt; x̄ est la moyenne de x; wij est une matrice de poids spatiaux avec des zéros sur la diagonale (i.e., wii = 0); et W est la somme de tous les wij.
+
+Bien que la formule paraisse impressionnante, elle ressemble fortement à un calcul de corrélation mais qui permet ici d'intégrer la matrice de poids.
+
+La valeur du coefficient I peut varier de -1 à 1, comme un coefficient de corrélation plus classique. L'importance du coefficient de Moran est qu'il permet également un test formel pour vérifier la présence d'autocorrélation spatiale.
+
+\textbf{Simulation Monte-Carlo}
+\nd Une simulation Monte-Carlo peut être utilisé pour ce type d'analyse. Les valeurs des variables seront assignées de façon aléatoire aux polygones et le coefficient I de Moran sera calculé. Cette procédure sera répétée n-fois afin d'établir une distribution des valeurs attendues. La valeur observée du coefficient est ensuite comparée à la distribution simulée afin de déterminer à quel point il est probable que ces valeurs soient aléatoires.
+
+\subsection{Les données géostatistiques (geostatistical - continuous spatial variation)}
+
+Les données géostatistiques sont des données dont la variable d'intérêt peut être interpolé pour tout point dans une région à partir de quelques échantillons. L'exemple typique est celui de la prospection minière, où la quantité d'un filon d'or dans une mine est interpolée à partir d'un nombre suffisant de carottes de forage. 
+
+La localisation des échantillons sont choisis pour assurer une représentation de la zone en respectant des contraintes économiques. L'intérêt des données géostatistiques est d'exploiter ces échantillons pour faire des inférences sur l'ensemble de la zone d'étude et d'ensuite estimer des intervalles de confiance .
+
+Voici quelques exemples de questions de recherches de ce champ des statistiques spatiale : estimation de la qualité de différents minerais dans une zone basée sur quelques carottes, l'interpolation de la pollution dans une zone à partir de quelques sites de surveillances ou même développement d'une carte topographique à partir de prélèvement d'altitude.
+
+La seule méthode d'interpolation spatiale que nous allons décrire est le krigeage qui est la première méthode à avoir tenu compte de la structure de dépendance spatiale des données. L'idée de base du krigeage est de prévoir la valeur de la variable d'intérêt d'une zone qui n'a pas été échantillonné par une combinaison linéaire de données issues des zones adjacentes.
+
+Voici les principales étapes du développement d'un modèle de krigeage géostatistique :
+
+\begin{enumerate}
+  \item Calculer la covariance des valeurs représentées à l'aide d'un semi-variogramme
+  \item Ajuster un modèle 
+  \item Générer des matrices d'équation de krigeage, prédire des valeurs ainsi qu'un intervalle de confiance pour chaque coordonnée dans la zone d'intérêt
+\end{enumerate}
+
+\textbf{Calcul du semi-variogramme (covariance des valeurs en fonction de la distance)}
+
+Le semi-variogramme est une fonction de dépendance spatiale.  Pour calculer les points du semi-variogramme, on prend un certain nombre de paires d'échantillons (distribués en fonction de la distance euclidienne entre les pairs) et on calcule la différence au carré de la variable d'intérêt entre chaque pair. 
+
+Voici l'estimateur le plus commun du semi-variogramme, celui des moments :
+
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.1]{semivario1.png}
+\end{center}
+\end{figure}
+
+
+où $N(r) = {(i, j) tel que |si − sj | = r}$ et $|N(r)|$ est le nombre de paires distinctes de l'ensemble $N(r)$.
+
+\nd Dans la représentation d'un exemple de semi-variogramme (figure X), on se rend compte que plus les points sont rapprochés entre-eux, plus les valeurs des données d'intérêt sont corrélées (faible semi-variance). Après une certaine distance, la corrélation est faible (semi-variance élevée).
+
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.3]{semivario2.png}
+\end{center}
+\end{figure}
+
+
+
+\nd
+
+
+\textbf{Modélisation du semi-variogramme}
+
+Plusieurs modèles sont possibles pour tenter de représenter les différences structures de covariance :
+\begin{itemize}
+  \item Modèle avec palier (exponentiel, sphérique...)
+  \item Modèle sans palier (linéaire, puissance...)
+\end{itemize}
+Cette modélisation est représentée par la ligne bleue dans la figure précédente. 
+
+\textbf{Générer des équations de krigeage}
+
+\nd Le modèle de base du krigeage possède une forme similaire au modèle de régression linéaire mais dans lequel les erreurs sont maintenant supposées dépendantes spatialement. Il s'énonce comme suit :
+\begin{center}
+ $Z(s) = µ(s) + δ(s), s ∈ D$
+\end{center}
+où $µ(·)$ est la structure déterministe pour l'espérance de $Z(·)$. La structure de $µ(·)$ précise le type de krigeage. Voici les trois grands types de krigeage en ordre croissant de complexité :
+
+\begin{itemize}
+  \item Le krigeage simple : $µ(s) = m$ est une constante connue
+  \item Le krigeage ordinaire : $µ(s) = µ$ est une constante inconnue. 
+  \item Le krigeage universel ou dérive externe: $µ(s) = Pp j=0 fj (s) βj$ est une combinaison linéaire de fonctions de la position $s$
+\end{itemize}
+
+Finalement $δ(·)$ est une fonction aléatoire, d'espérance nulle et de structure de dépendance connue. $δ(·)$ peut être estimé par un modèle de semi-variogramme.
+
+\section{Ressources R}
+
+\subsection{Introduction}
+
+La statistique spatiale est un vaste sujet cependant l'un des auteurs d'un livre \emph{Applied Spatial Data Analysis with R} Roger Bivand  maintient une page web sur le site du CRAN avec 185 librairies liées aux statistiques spatiales . Comme ce site est exhaustif et maintenu à jour, notre conseil est de le consulter en parallèle avec la lecture de cette section. 
+Au lieu de décrire les 185 librairies dans cette section, nous allons décrire l'organisation de chaque section du site du CRAN, identifier les 30 librairies les plus téléchargées et expliquer brièvement les principales méthodes des librairies qui seront traitées dans la section 5 du tutoriel.
+
+\subsection{Catégories principales des librairies R en statistiques spatiales}
+
+\nd L'on peut classifier les librairies R reliées aux statistiques spatiaux en deux grandes catégories : 
+
+\nd Les librairies utilitaires qui permettent d'importer, de structurer, de manipuler, de visualiser les données ainsi que les résultats des analyses. La seconde catégorie correspond aux librairies qui implémentent les analyses statistiques propres aux statistiques spatiales. Certaines librairies sont plus petites et très spécialisées avec seulement quelques fonctions alors que d'autres comme spatstat a plus de 2000 fonctions répertoriées et 1600 pages de documentation.
+
+\nd Les 185 librairies de R sont catégorisées avec la structure suivante: 
+
+% Please add the following required packages to your document preamble:
+% \usepackage{booktabs}
+% \usepackage{graphicx}
+% \usepackage[normalem]{ulem}
+% \useunder{\uline}{\ul}{}
+\begin{table}[]
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}|l|l|l|@{}}
+\toprule
+\textbf{Catégories} & \textbf{Descriptions} & \textbf{Librairies} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Classes\\   for spatial data and metadata\end{tabular} & \begin{tabular}[c]{@{}l@{}}Classes\\   partagées pour l’entreposage et le traitement et la visualisation des données\\   spatiales\end{tabular} &  \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Spatial data -\\   general\end{tabular} & \begin{tabular}[c]{@{}l@{}}Classes de\\   données spatiales principalement de type vecteur\end{tabular} & sp, sf, stars, stplanr, spacetime, inlmisc, maptools \\ \midrule
+Raster data & \begin{tabular}[c]{@{}l@{}}Classes de\\   données spatiales de type matricielles\end{tabular} & \begin{tabular}[c]{@{}l@{}}raster, stars,\\   spatial\_tools\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Geographic\\   metadata\end{tabular} & \begin{tabular}[c]{@{}l@{}}Classes et\\   méthodes pour l’ajout et le traitement de métadonnées selon différents\\   standards\end{tabular} & geometa, ncdf4 \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Reading\\   and writing spatial data\end{tabular} & Chargement et écriture des données spatiales &  \\ \midrule
+Reading and writing spatial data & \begin{tabular}[c]{@{}l@{}}rgdal est la librairie\\   principale qui facilite l’importation et l’exportation de cartes de format\\   vecteurs et matricielles selon différents standards dont GDAL, OGR, OGC  ESRI\end{tabular} & rgdal, vec2dtransf \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Reading and writing spatial data - data\\   formats\end{tabular} & \begin{tabular}[c]{@{}l@{}}Autres librairies\\   plus spécialisées qui donnent accès à des formats OGS, ESRI...\end{tabular} & \begin{tabular}[c]{@{}l@{}}sf, regeos, wkb,\\   geojson, geojsonio, geoaxe lawn, maps, gemometa, ows4R, ncdf4, geometa,\\   mapdata, mapproj, shapefiles, maptools, gmt\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Reading and writing spatial data - GIS\\   Software connectors\end{tabular} & \begin{tabular}[c]{@{}l@{}}Librairies permettant\\   de se connecter avec les principaux logiciels GIS\end{tabular} & \begin{tabular}[c]{@{}l@{}}rpostgis, RPostgreSQL, postGISTools, rgrass7, spgrass6, RSAGA,\\   RQGIS, RPvGeo\end{tabular} \\ \midrule
+Interfaces to Spatial Web-Services & \begin{tabular}[c]{@{}l@{}}Librairies pour\\   faciliter la connexion à des services/outils web\end{tabular} & ows4R, geosapi, geonapi, \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Specific geospatial data sources of\\   interest\end{tabular} & \begin{tabular}[c]{@{}l@{}}Répertoires de\\   cartes de toutes sortes (frontières des pays, éléments topographique (routes,\\   lacs...), recensements américains...\end{tabular} & \begin{tabular}[c]{@{}l@{}}naturalearth, rworldmap, rworldxtra, cshapes, marmap, maptools,\\   rgbif, geonames, OpenStreetMap, osmar, tidycensus, tigris\end{tabular} \\ \midrule
+Handling spatial data & \begin{tabular}[c]{@{}l@{}}Traitement et\\   manipulation des données spatiales\end{tabular} &  \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Data processing\\   - general\end{tabular} & \begin{tabular}[c]{@{}l@{}}Librairies\\   utilitaires pour des données vectorielles (échantillonnage, calcul des\\   distance, segmentation des données...)\end{tabular} & \begin{tabular}[c]{@{}l@{}}rgdal, maptools, rgeos, raster, gdalUtils, gdistance, cshapes,\\   geosphere, spsurvey, trip, spcosa, magclass, taRifx, geoaxe, lawn, areal,\\   qualmap\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Data processing - raster and imagery\\   data\end{tabular} & \begin{tabular}[c]{@{}l@{}}Exploration et\\   traitement de données matricielles pour la télédétection\end{tabular} & landsat \\ \midrule
+Data cleaning & \begin{tabular}[c]{@{}l@{}}Inspection et\\   traitement des données spatiales pour gérer les erreurs topologiques\end{tabular} & cleangeo, lwgeom \\ \midrule
+Visualizing spatial data & \begin{tabular}[c]{@{}l@{}}Visualisation\\   des données spatiales\end{tabular} &  \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Base\\   visualization packages\end{tabular} & \begin{tabular}[c]{@{}l@{}}Les librairies\\   de classes de bases (sp, sf, raster) intègrent également des méthodes\\   de visualisation qui peuvent être améliorées avec des librairies de palettes\\   de couleurs\end{tabular} & \begin{tabular}[c]{@{}l@{}}sp, sf, raster,\\   rasterViz, RColorBrewer, viridis, classInt\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Thematic cartography\\   packages\end{tabular} & \begin{tabular}[c]{@{}l@{}}Outils pour\\   rapidement visualiser des cartes à l’aide de modèles\end{tabular} & \begin{tabular}[c]{@{}l@{}}tmap, quickmapr, cartography, mapmisc, PBSmapping, PBSmodelling,\\   GEOmap, geomapdata\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Packages based on web-mapping\\   frameworks\end{tabular} & \begin{tabular}[c]{@{}l@{}}Outils pour\\   rapidement visualiser des cartes à déployer sur le web à l’aide de modèles\end{tabular} & \begin{tabular}[c]{@{}l@{}}mapview, leaflet,\\   leafletR, RgoogleMaps, plotKML, ggmap, mapedit, ggsn\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Building\\   Cartograms\end{tabular} & \begin{tabular}[c]{@{}l@{}}Librairies de\\   cartogrammes (substitution d’une variable comme population au lieu de l’aire\\   d’un pays)\end{tabular} & \begin{tabular}[c]{@{}l@{}}micromap, recmap,\\   statebins, cartogram, geogrid\end{tabular} \\ \midrule
+Analyzing spatial data & \begin{tabular}[c]{@{}l@{}}Librairie pour\\   analyser les données spatiales (univarié, multivarié, interpolation, structure\\   de corrélation...)\end{tabular} &  \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Point pattern\\   analysis\end{tabular} & \begin{tabular}[c]{@{}l@{}}Outils\\   d’analyses pour identifier la nature de la distribution des données et la\\   répartition d’objets dans une région (arbres...)\end{tabular} & \begin{tabular}[c]{@{}l@{}}spatial, spatstat, spatgraphs, splancs, smacpod, ecespa, ads,\\   aspace, ash, DSpat, dbmss, spatialsegregation, latticeDensity\end{tabular} \\ \midrule
+Geostatistics & \begin{tabular}[c]{@{}l@{}}Les librairies\\   géostatistiques permettent l’analyse d’échantillons afin de réaliser des\\   inférences sur l’ensemble de la zone d’étude et d’estimer des intervalles de\\   confiance\end{tabular} & \begin{tabular}[c]{@{}l@{}}gstat, geoR, varidag,\\   automap, intamp, fields, spatial, spBAyes, ramps, geospt, spsann, geostatsp,\\   FRK, RandomFields, CompRandRld,constrainedKriging, geospt, spTimer, rtop,\\   georob, SpatialTools, sperroest, spm, ExceedanceTools, deldir, tripack,\\   akima, MBA, spatialCovariance, tgp, Stem, FieldSim, SSN, ipdw, Rsurvey\end{tabular} \\ \midrule
+Disease mapping and areal data analysis & \begin{tabular}[c]{@{}l@{}}Ces librairies\\   traitent des liens entre différents sites représentant chacun une zone de\\   données agrégées\end{tabular} & \begin{tabular}[c]{@{}l@{}}DCluster, spdep, spatialreg, spmoran, SpatialEpi, diseasemapping,\\   AMOEBA, seg, OasisR, spgwr, GWmodel, sparr, CARBayes, spaMM, PReMiuM,\\   spatsury, spBayesSurv, spselect\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Spatial\\   regression\end{tabular} & \begin{tabular}[c]{@{}l@{}}Librairies\\   spécialisées dans la régression spatiale avec différentes distributions\\   (point pattern ou géostatistiques)\end{tabular} & \begin{tabular}[c]{@{}l@{}}nlme, spatialreg, spdep, sphet, McSpatial, S2sls, spanel, splm,\\   spatialprobit, ProbitSpatial, starma\end{tabular} \\ \midrule
+\begin{tabular}[c]{@{}l@{}}Ecological\\   analysis\end{tabular} & \begin{tabular}[c]{@{}l@{}}Librairies\\   spécialisées dans l’analyse des données environnementales.\end{tabular} & \begin{tabular}[c]{@{}l@{}}ade4, adehabitatHR,\\   abehabitatHS, adehabitatLT, adebitatMA, pastecs, vegan, tripEstimation,\\   trip.ncf, spind, rangeMapper, siplab, ModelMap, SpatialPosition, Watersheds,\\   Rcitrus, ngsptatial, landscapemetrics, FGRASTATS\end{tabular} \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+\newpage
+
+\subsection{Les 30 librairies en statistiques spatiales les plus téléchargées}
+
+A l'aide d'un peu de web scraping, nous avons identifié parmi les 185 librairies répertoriées, les 30 plus populaires téléchargées récemment. Il faut noter que certaines librairies comme RColorBrewer, viridis et igraph sont utilisées dans d'autres domaine que l'analyse spatiale et que plusieurs librairies utilitaires peuvent être des dépendances d'autres librairies. Nonobstant ces limites ce tableau donne une représentation des librairies le plus importantes dans le domaine. 
+
+Les 30 librairies téléchargées sur CRAN depuis 1 mois (au 27 février 2020) :
+% Please add the following required packages to your document preamble:
+% \usepackage{booktabs}
+% \usepackage{longtable}
+% Note: It may be necessary to compile the document several times to get a multi-page table to line up properly
+\begin{longtable}{@{}lllll@{}}
+\toprule
+ & \begin{tabular}[c]{@{}l@{}}Nom\\    de la librairie\end{tabular} & \begin{tabular}[c]{@{}l@{}}\%\\    de téléchargement\end{tabular} & \begin{tabular}[c]{@{}l@{}}Description\\    sommaire\end{tabular} & Sous-catégorie \\* \midrule
+\endfirsthead
+%
+\endhead
+%
+1 & RColorBrewer & 14.50\% & color schemes for maps and other graphics & \begin{tabular}[c]{@{}l@{}}Base\\   visualization\end{tabular} \\
+2 & sp & 8.30\% & \begin{tabular}[c]{@{}l@{}}classes and methods for dealing\\   with spatial data\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spatial\\   data - general\end{tabular} \\
+3 & viridis & 7.70\% & \begin{tabular}[c]{@{}l@{}}color schemes for maps and other\\   graphics\end{tabular} & \begin{tabular}[c]{@{}l@{}}Base\\   visualization\end{tabular} \\
+4 & igraph & 6.40\% & \begin{tabular}[c]{@{}l@{}}Routines for simple graphs and\\   network analysis.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spatial\\   data - general\end{tabular} \\
+5 & maptools & 5.70\% & \begin{tabular}[c]{@{}l@{}}Conversion\\   functions between  spatstats ans sp\\   classes\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spatial\\   data - general\end{tabular} \\
+6 & nlme & 4.30\% & \begin{tabular}[c]{@{}l@{}}Spatial\\   regression (geostatistical)\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spatial\\   regression\end{tabular} \\
+7 & rgdal & 4.20\% & \begin{tabular}[c]{@{}l@{}}Provides binding to GDAL and PROJ.4\\   map libraries as well as writing raster and vector files\end{tabular} & Reading and writing spatial data \\
+8 & classInt & 4.00\% & \begin{tabular}[c]{@{}l@{}}Functions for choosing class\\   intervals for thematic cartography.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Base\\   visualization\end{tabular} \\
+9 & sf & 3.80\% & \begin{tabular}[c]{@{}l@{}}Support for simple features, a\\   standardized way to encode spatial vector data\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spatial\\   data - general\end{tabular} \\
+10 & raster & 3.60\% & \begin{tabular}[c]{@{}l@{}}Reading, writing, manipulating,\\   analyzing and modeling of gridded spatial data.\end{tabular} & Raster data \\
+11 & RgoogleMaps & 2.30\% & \begin{tabular}[c]{@{}l@{}}Accessing\\   Google Maps™\end{tabular} & \begin{tabular}[c]{@{}l@{}}Web-mapping\\   framework\end{tabular} \\
+12 & maps & 2.20\% & Display of maps & \begin{tabular}[c]{@{}l@{}}Spatial\\   data - general\end{tabular} \\
+13 & ggmap & 2.10\% & \begin{tabular}[c]{@{}l@{}}Spatial visualisation with Google\\   Maps and OpenStreetMap\end{tabular} & \begin{tabular}[c]{@{}l@{}}Web-mapping\\   framework\end{tabular} \\
+14 & leaflet & 2.00\% & \begin{tabular}[c]{@{}l@{}}Methods to view spatial objects\\   interactively\end{tabular} & \begin{tabular}[c]{@{}l@{}}Web-mapping\\   framework\end{tabular} \\
+15 & rgeos & 1.70\% & \begin{tabular}[c]{@{}l@{}}Interface to topology functions for\\   sp objects using GEOS .\end{tabular} & \begin{tabular}[c]{@{}l@{}}Data\\   formats\end{tabular} \\
+16 & RPostgreSQL & 1.70\% & \begin{tabular}[c]{@{}l@{}}Interface R with a\\   'PostGIS'-enabled database\end{tabular} & \begin{tabular}[c]{@{}l@{}}GIS\\   software connectors\end{tabular}
+\end{longtable}
+
+%Deuxième partie
+% Please add the following required packages to your document preamble:
+% \usepackage{booktabs}
+\begin{table}[]
+\begin{tabular}{@{}lllll@{}}
+\toprule
+17 & deldir & 1.30\% & \begin{tabular}[c]{@{}l@{}}Calculates the Delaunay\\   triangulation and the Dirichlet or Voronoi tessellation\end{tabular} & \begin{tabular}[c]{@{}l@{}}Geospatial\\   analysis\end{tabular} \\ \midrule
+18 & vegan & 1.30\% & \begin{tabular}[c]{@{}l@{}}Ordination methods and other useful\\   functions for community and vegetation ecologists,\end{tabular} & \begin{tabular}[c]{@{}l@{}}Ecological\\   analysis\end{tabular} \\
+19 & fields & 1.30\% & \begin{tabular}[c]{@{}l@{}}For curve, surface and function\\   fitting with an emphasis on splines, spatial data, geostatistics, and spatial\\   statistics.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Geospatial\\   analysis\end{tabular} \\
+20 & ade4 & 1.30\% & \begin{tabular}[c]{@{}l@{}}Analysis of Ecological Data:\\   Exploratory and Euclidean Methods in Environmental Sciences\end{tabular} & \begin{tabular}[c]{@{}l@{}}Ecological\\   analysis\end{tabular} \\
+21 & mapproj & 1.20\% & \begin{tabular}[c]{@{}l@{}}Access ESRI proprietary Data\\   formats\end{tabular} & Data formats \\
+22 & geosphere & 1.10\% & \begin{tabular}[c]{@{}l@{}}Computations of distance and area\\   to be carried out on spatial data in geographical coordinates\end{tabular} & \begin{tabular}[c]{@{}l@{}}Data\\   processing\end{tabular} \\
+23 & lwgeom & 0.90\% & \begin{tabular}[c]{@{}l@{}}handling and reporting of topology\\   errors and geometry validity issues\end{tabular} & \begin{tabular}[c]{@{}l@{}}Data\\   Cleaning\end{tabular} \\
+24 & spdep & 0.90\% & \begin{tabular}[c]{@{}l@{}}basic functions for building\\   neighbour lists and spatial weights, tests for spatial autocorrelation for\\   areal data like Moran's I.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Disease mapping and areal data\\   analysis\end{tabular} \\
+25 & spatstat & 0.90\% & \begin{tabular}[c]{@{}l@{}}Comprehensive open-source toolbox\\   for analysing Spatial Point Patterns. Focused mainly on\\   two-dimensional point patterns, PPP classes\end{tabular} & \begin{tabular}[c]{@{}l@{}}Point\\   pattern analysis\end{tabular} \\
+26 & tmap & 0.80\% & \begin{tabular}[c]{@{}l@{}}Modern basis for thematic mapping\\   optionally using a Grammar of Graphics syntax.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Thematic\\   cartography\end{tabular} \\
+27 & gstat & 0.70\% & \begin{tabular}[c]{@{}l@{}}Wide range of functions for\\   univariate and multivariate geostatistics\end{tabular} & Geostatistics \\
+28 & spacetime & 0.70\% & \begin{tabular}[c]{@{}l@{}}Extends the shared classes defined\\   in sp for spatio-temporal data\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spatial\\   data - general\end{tabular} \\
+29 & mapview & 0.60\% & \begin{tabular}[c]{@{}l@{}}Methods to view spatial objects interactively,\\   usually on a web mapping base.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Web-mapping\\   framework\end{tabular} \\
+30 & ncdf4 & 0.50\% & \begin{tabular}[c]{@{}l@{}}Read and write functions for\\   handling metadata (CF conventions) in the self-described NetXDF format.\end{tabular} & \begin{tabular}[c]{@{}l@{}}Geographic\\   metadata\end{tabular}
+\end{tabular}
+\end{table}
+
+
+
+
+
+\subsection{Quelques références R incontournables en analyse spatiale}
+
+L'ouvrage Applied Spatial Data Analysis with R traite de données ponctuelles (spatial point pattern) au chapitre 7, dans les chapitres 9 à 11 des données latticielles (lattice data ou areal data) et finalement au chapitre 8 des données géospatiales.
+
+Geocomputation with R   est une ressource en ligne exhaustive sur l'analyse géographique, la visualisation et la modélisation, qui accompagne un livre du même titre.
+
+Finalement, Datacamp offre une formation en données spatiales en R (Skill Track: Spatial Data with R) avec les cours suivants : Visualizing Geospatial Data in R, Spatial Analysis with sf and raster in R, Spatial Statistics in R, Interactive Maps with leaflet in R.
+
+\subsection{Librairies abordées durant la section tutoriel}
+
+\textbf{Librairies de classes de données spatiales : SP et SF}
+
+La représentation vectorielle des données en R n'est pas forcément adaptée pour représenter des données spatiales. Pour résoudre ce problème, des classes de données spatiales furent développées pour faciliter la manipulation des données spatiales dans des objets qui ressemblent aux data frames  plus classiques. Les trois principales librairies de classes sont SP, SF et Raster.
+
+\textbf{Librairie SP}
+
+Le développement du librairie de classes et méthodes spatiales sp a débuté en 2005. Les classes sp sont toujours les plus fréquemment utilisées en R pour représenter les vecteurs et matrices spatiales. 
+
+Une des classes de base offerte dans sp est un objet spatial nommé SpatialPoints. Cet objet Spatial est une classe qui définit le système de coordonnés de référence (proj4string) ainsi que l'aire de l'objet (bbox). Les données spatiales sont stockées dans des slots auxquels il est possible d'accéder avec le symbole @ dont l'usage est similaire au symbole du dollar pour les attributs d'un dataframe $(objet@slot)$. 
+
+Il existe 10 sous-classes dans sp pour représenter divers types d'objets dont SpatialPoints, SpatialLines, SpatialPolygons, SpatialGrid…
+Les sous-classes de Spatial Points peuvent être intégrées dans un SpatialDataFrame qui est similaire au DataFrame de base de R. Ainsi, la plupart des méthodes de R fonctionne sur ces objets. Par contre, ces SpatialDateFrame ne peuvent être manipulés par des librairies hors R Base telles que dplyr et ne peuvent être visualisé avec ggplot2. La visualisation des objets sp se fait avec la fonction plot de base et une méthode de sp, spplot.
+
+\textbf{Librairie SF}
+
+La librairie sf est l'implantation en R du standard ouvert simple features pour la représentation géographique vectorielle. Cette librairie est développée très activement depuis 2016 . L'objectif de sf est de remplacer à terme sp. Non seulement, l'utilisation du standard ouvert permet une meilleure intégration avec les outils logiciels SIG (GIS) tel que PostGIS, GeoJSON et ArcGIS mais il fonctionne également dans l'univers tidyverse (dyplr, ggplot2, …). De plus, il est capable d'interfacer avec les librairies GDAL, GEOS et PROJ ce qui évite l'utilisation de la librairie rgdal.
+
+Les objets sf peuvent être composés de variables correspondantes à des données spatiales ou non-spatiales. Les variables spatiales appartiennent à une classe géométrique nommée sfc. ggplot2 permet également la visualisation d'objet sf avec $geom_sf()$. 
+
+\textbf{Analyses de données ponctuelles : Librairie spatstat} 
+
+La librairie spatstat est une librairie open source spécialisée dans l'analyse de processus de points, principalement les processus de points en deux dimensions. La librairie gère également des processus en trois dimensions et d'autres types d'objets géométriques. 
+
+Il contient plus de 2000 fonctions pour tracer des données spatiales, réaliser des analyses exploratoires, des simulations, effectuer un échantillonnage spatial ou encore des diagnostics de modèles et de l'inférence formelle.
+
+Les méthodes exploratoires comprennent les tests du quadrant, les fonctions K et leurs enveloppes de simulation, les statistiques de distance et des plus proches voisins. Ces méthodes seront principalement utilisées afin de comprendre la distribution du processus de points auquel l'on fait face.
+
+Contrairement à d'autres librairies, travailler avec des processus de points signifie que l'on peut se baser sur des données dans un format plus “classique”, il n'est pas nécessaire de forcément travailler avec des données dans un format spatial.
+
+L'objectif des méthodes aléatoires est généralement de tester le cas d'une distribution aléatoire complète. 
+
+Les processus ponctuels de Poisson sont les modèles les plus simples pour les modèles de points, un modèle de Poisson suppose que les points sont stochastiquement indépendants. Il peut permettre aux points d'avoir une densité spatiale non uniforme mais le cas particulier d'un processus de Poisson avec une densité spatiale uniforme est souvent appelé aléatoire spatiale complète. 
+
+Les processus ponctuels de Poisson sont inclus dans la classe plus générale des modèles de processus ponctuels de Gibbs. Dans un modèle de Gibbs, il existe une interaction ou une dépendance entre les points. De nombreux types d'interaction différents peuvent être spécifiés.
+
+
+\textbf{Analyse de données latticielles: Librairie spdep }
+
+La librairie spdep est une collection de fonctions pour créer des matrices de poids spatiaux à partir de polygones ou de processus de points selon les distances ou tesselations.
+
+Cette librairie peut toujours prendre en entrée des processus de points mais va principalement nécessiter des données spatiales. Ces dernières sont généralement décrites par un champ nommé « Géométrie » qui va permettre d'ajuster des polygones sur lesquels pourront être effectuées d'autres analyses.
+
+La librairie rend ensuite possible l'utilisation de ces objets dans des analyses spatiales, ces analyses peuvent notamment être :
+
+\begin{itemize}
+  \item Aggrégation par région 
+  \item Tests d'autocorrélation spatiale, Morans I et Gearys Ces
+  \item Estimés empiriques Bayesien 
+  \item Estimateurs locaux LOSH d'hétéroscédasticité spatiale
+\end{itemize}
+
+Le calcul de matrices de poids spatiaux reste pour autant au cœur du librairie et sera utile à un grand nombre des analyses disponibles.
+Ces dernières peuvent être également calculées de différentes façons et permettent notamment de considérer différents critères d'adjacence. 
+
+La librairie implémente également des analyses un peu plus simples et facilite notamment le calcul du moyenne spatiale mobile. Des fonctions de visualisations existent afin d'ajuster graphiquement certaines des analyses disponibles mais ce n'est pas le cas pour la majorité d'entre elles, c'est le cas de la moyenne spatiale mobile, une autre librairie de visualisation est nécessaire notamment pour visualiser les représentations géométriques de nos données.
+
+Un avantage particulier de spdep est également que la librairie inclut des simulations de Monte-Carlo dans certains des tests disponibles, c'est le cas notamment du coefficient I de Moran. Cette procédure sera donc répétée n-fois afin d'établir une distribution des valeurs attendues. La valeur observée du coefficient est ensuite comparée à la distribution simulée afin de déterminer à quel point il est probable que ces valeurs soient aléatoires.
+
+\textbf{Analyse de données géostatistiques : Librairie gstat}
+
+Le librairie gstat offre une panoplie de fonctionnalités pour interpoler des données géostatistiques : plusieurs types de variogrammes, des analyses de krigeage ordinaires et universelles à plusieurs variables (cokriging), des analyses multivariées.
+Les principales fonctions sont les suivantes :
+\begin{itemize}
+  \item Variogram prend en entrée les coordonnées des échantillons de la variable d'intérêt pour représenter la corrélation entre les échantillons en fonction de leur distance.
+  \item fit.variogram modélise la structure de corrélation spatiale à l'aide du résultat issu de variogram. gstat peut estimer automatiquement cette structure ou l'usager peut le faire manuellement
+  \item krige, fait l'interpolation et estime la variance de la variable d'intérêt sur l'ensemble de la région à l'aide du résultat de fit.variogram. Plusieurs paramètres sont possibles en fonction du type de krigeage : ordinaire, universel à une variable, universel à plusieurs variables.
+  \item
+\end{itemize}
+
+
+\section{Exemples d'analyses avec des données}
+
+\subsection{Processus de points}
+\nd Cette information spatiale peut prendre différentes formes et représenter de nombreux phénomènes.
+Un "processus de points" (ou "point pattern") va nous permettre de représenter la position ou les coordonnées de différents évènements au sein d'une région pré-définie. Le nombre de points ainsi que leur position est considéré comme aléatoire.
+Une région contient un nombre infini de points soit les coordonnées (xi,yi) sur un plan. Le nombre de points est infini puisque n'importe quelle position qui peut être définie comme un ensemble de coordonnées contenues dans la région en est un point.
+
+\subsubsection{Librairie Spatstat} 
+La première librairie abordée dans ce tutoriel sera la librairie "Spatstat" dont les fonctionnalités principales seront abordées un peu plus loin. Les premiers exemples présentés ci-dessous sont tous disponibles à travers la librairie et peuvent être appelés de cette façon:  
+<<code1,eval=FALSE, fig.height=5>>=
+data("nom du jeu de données")
+@
+\sepline
+\nd Spatstat : https://CRAN.R-project.org/package=spatstat \\
+Quick Reference Guide : https://spatstat.org/resources/spatstatQuickref.pdf
+
+\begin{center}
+<<code2, fig=TRUE, eval=TRUE>>=
+# Install the spatstat package
+if(!require(spatstat)) install.packages("spatstat",repos = "http://cran.us.r-project.org")
+# Load the spatstat package
+library(spatstat)
+data(bei)
+par(mfrow = c(1,1))
+plot(bei, main = "Jeu de données représentant la position des arbres")
+@
+\end{center}
+
+\nd Ces données représentent la position de 3605 arbres dans une forêt tropicale. L'objet à l'étude est donc ici les coordonnées respectives de chacune des cellules.
+
+\subsubsection{Covariables} 
+
+Maintenant que la partie "réponse" de notre étude est identifiée, soit les paramètres de la distribution des points, il est également possible de considérer une partie de nos données comme explicatives. Ces covariables peuvent être une fonction Z(u) définie en tout point de la région observée et qui pourrait représenter par exemple l'altitude ou la pente des sols observés. Tel que :
+\begin{center}
+
+<<code3, fig=TRUE, rexample = FALSE, eval=TRUE>>=
+par(mfrow = c(2,1))
+plot(bei.extra$elev, main="Position des arbres en fonction de l'altitude")
+plot(bei, add=TRUE, pch=16, cex=0.3)
+
+M <- persp(bei.extra$elev, theta=-45, phi=18, expand=7, border=NA, apron=TRUE
+, shade=0.3,box=FALSE, visible=TRUE
+, main="Position des arbres en fonction de la pente des sols")
+perspPoints(bei, Z=bei.extra$elev, M=M, pch=16, cex=0.3)
+@
+\end{center}
+
+\subsubsection{Intensité} 
+L'un des principaux objectifs de ces processus de points est de déterminer si leur distribution est aléatoire ou non. Cela qui revient à calculer la densité moyenne de points dans un espace, soit l'intensité (le nombre de points divisés par l'aire de la région). Cette intensité peut ainsi être constante (uniforme) ou non.
+
+La libraire de visualisation *ggplot2* va nous permettre de mieux représenter ce concept. 
+\begin{center}
+
+<<code4>>=
+# Install the ggplot2 package
+if(!require(ggplot2)) install.packages("ggplot2",repos = "http://cran.us.r-project.org")
+if(!require(gridExtra)) install.packages("gridExtra",repos = "http://cran.us.r-project.org")
+# Load the ggplot2 package
+library(ggplot2)
+library(gridExtra)
+@
+
+
+<<code5, fig=TRUE,>>=
+x <- runif(100, 0, 1)
+y <- runif(100, 0, 1)
+unif <- cbind.data.frame(x,y)
+
+x2 <- seq(0,1, length.out =  100)
+y2 <- seq(0,1, length.out =  100)
+ex2 <- cbind.data.frame(x2,y2)
+
+plot1 <- ggplot() + 
+  geom_point(data = unif, aes(x = x, y = y)) + 
+  coord_fixed()
+plot2 <- ggplot() + 
+  geom_point(data = ex2, aes(x = x2, y = y2)) + 
+  coord_fixed()
+grid.arrange(plot1, plot2, nrow=1, ncol=2)
+@
+\end{center}
+
+\nd Chacun de ces groupes est composés de 60 points, calculer l'intensité globale de chacun des ces groupes retrounera ainsi le même résultat bien que leur distribution est très différente. Il serait possible de vérifier la façon dont la densité varie à travers la région à l'étude en divisant l'espace en plusieurs sous-espaces. Ci-desous, 16 sous-régions sont définies et 60 points aléatoires issus d'une distribution uniforme sont représentés à l'aide de ggplot2.
+
+\begin{center}
+<<code6,fig=TRUE,>>=
+ggplot() + 
+  geom_vline(xintercept = seq(from = 0, to = 1, by = 0.25)) +
+  geom_hline(yintercept = seq(from = 0, to = 1, by = 0.25)) +
+  geom_point(data = unif, 
+             aes(x = x, y = y)) +
+  coord_fixed()
+@
+\end{center}
+
+\nd Si l'on calcule l'intensité respective de chacun de ces nouveaux quadrants, l'on retrouve des résultats bien plus représentatifs de la distribution des points. Cela est possible à l'aide de ggplot2 de cette façon:
+
+\begin{center}
+<<code7, fig=TRUE,>>=
+ggplot(data = unif, aes(x = x, y = y)) +
+  geom_bin2d(binwidth = c(0.25, 0.25)) +
+    geom_vline(xintercept = seq(from = 0, to = 1, by = 0.25)) +
+    geom_hline(yintercept = seq(from = 0, to = 1, by = 0.25)) +
+    geom_point()  +
+  scale_fill_distiller(palette = "Spectral") +
+  coord_fixed()
+@
+\end{center}
+
+\nd Une approche plus formelle de ce test peut facilement être calculée à l'aide de la librarie spatstat et de sa fonction:
+<<code7, rexample = FALSE, eval=FALSE,fig.height=5>>=
+quadrat.test(ppp)
+@
+
+\nd Pour autant, la majorité des fonctionalités de spatstat vont nécessiter un nouveau type d'objet en entrée, un "Planar Point Pattern" ou "ppp".
+\sepline
+https://www.rdocumentation.org/packages/spatstat/versions/1.63-2/topics/quadrat.test
+
+\subsubsection{Planar Point Pattern}
+Un objet "ppp" vient simplement représenter un processus de points dans un plan en deux dimensions. Et sera créé de cette façon : 
+<<rexample = FALSE, eval=FALSE>>=
+ppp(x,y, '…', window)
+@
+Ou x est un vecteur de coordonnées x, y est un vecteur de coordonnées y et window correspond aux délimitations de la région à l'étude telle que présenté plus haut.
+\sepline
+https://www.rdocumentation.org/packages/spatstat/versions/1.63-2/topics/ppp
+
+L'utilisation d'objects "ppp" va nous permettre d'analyser des processus de points dont le comportement est bien différent d'une loi uniforme comme dans l'exemple sur l'intensité ci-dessus.
+\sepline
+
+\subsubsection{Processus de points de Poisson}
+Un processus de points de Poisson va nous permettre de générer des points aléatoires sur la base d'un paramètre lambda qui correspond à l'intensité espérée des points dans la région à l'étude, grâce à la fonction:
+<<rexample = FALSE, eval=FALSE>>=
+rpoispp(lambda, win)
+@
+\sepline
+https://www.rdocumentation.org/packages/spatstat/versions/1.63-2/topics/rpoispp
+
+\begin{center}
+<<fig=TRUE>>=
+# La fonction spatstat::owin(xrange= , yrange= )nous permet de facilement générer une région 
+# qui prend comme paramètres les coordonnées limites de x et de y
+# https://www.rdocumentation.org/packages/spatstat/versions/1.63-2/topics/owin
+region <- owin(xrange=c(0,1), yrange=c(0,1))
+# Définition du paramètre d'intensité pour le processus de poisson (Soit le nombre de points divisés par l'aire de la région)
+# Soit ici 100 points divisé par l'aire d'un cercle de rayon 5
+lambda <- 100 / area(region)
+# L'on peut maintenant simplement appeler la fonction ci-dessus
+pppPoisson <- rpoispp(lambda, region, lmax = 100)
+plot(pppPoisson)
+@
+\end{center}
+
+\subsubsection{Processus groupés et ordinaires}
+D'autres types de processus de points existent et peuvent généralement être catégorisés comme groupés, dans lesquels les points auront tendance à être plus proches les uns des autres, ou ordinaires/réguliers, dans lesquels les points auront tendance à être plus espacés les uns des autres. Le processus de poisson présenté plus haut ne correspond pour autant à aucune de ces deux catégories puisqu'il que son intensité est uniforme, la répartition des points ne dépend pas de la position des autres. 
+\sepline
+Un processus de points de Thomas, un processus groupé, permet de représenter des points qui ont tendance à former des clusters, cela peut être notamment intéressant pour représenter des arbres qui apparaissent proches les uns des autres. Ce qui correspond aux données de notre premier exemple de ce tutoriel (les données représentant la position de 3605 arbres dans une forêt tropicale), en appliquant ce que l'on a appris sur l'intensité, il est possible de facilement visualiser cela.
+
+\begin{center}
+<<fig=TRUE>>=
+clusterArbres <- as.data.frame.ppp(bei)
+ggplot(data = clusterArbres, aes(x = x, y = y)) +
+  geom_bin2d(binwidth = c(250, 125)) +
+    geom_vline(xintercept = seq(from = 0, to = 1000, by = 250)) +
+    geom_hline(yintercept = seq(from = 0, to = 500, by = 125)) +
+    geom_point()  +
+  scale_fill_distiller(palette = "Spectral") +
+  coord_fixed()
+@
+\end{center}
+Un tel processus peut-être facilement généré à l'aide de la fonction:
+<<rexample = FALSE, eval=FALSE>>=
+rThomas(kappa, scale, mu, win)
+@
+Cette fonction va prendre deux paramètres de plus que la fonction pour les processus de Poisson (kappa "correspond" ici au lambda de la fonction précédente) soit scale et mu.
+\begin{enumerate}
+\item scale: Écart-type d'un point par rapport au centre du cluster auquel il appartient
+\item mu: Nombre moyen de points ou intensité moyenne dans un cluster
+\end{enumerate}
+\sepline
+https://www.rdocumentation.org/packages/spatstat/versions/1.63-2/topics/rThomas
+
+\begin{center}
+<<fig=TRUE>>=
+region <- owin(xrange=c(0,40), yrange=c(0,40))
+kappa <- 200 / area(region)
+
+# L'on peut maintenant simplement appeler la fonction ci-dessus
+pppThomas <- rThomas(kappa, scale = 0.7, mu = 70, win = region)
+plot(pppThomas)
+@
+\end{center}
+    
+\subsubsection{Distribution des plus-proches voisins}
+Une autre façon de déterminer le regroupement ou l'intensité d'un processus de points est de considérer chaque point et comment il se rapporte aux autres. Une mesure de cela est la distribution des distances de chaque point par rapport à son plus proche voisin.
+\sepline
+La fonction \texttt{nndist()} prend en entrée un processus de point et retourne pour chaque sa distance avec son plus proche voisin.
+<<rexample = FALSE, eval=FALSE>>=
+nndist(ppp)
+@
+\sepline
+https://www.rdocumentation.org/packages/spatstat/versions/1.63-3/topics/nndist
+
+\begin{center}
+<<fig=TRUE>>=
+#Calcul de la distribution pour le processus de points uniformes de poisson créé plus tôt
+nndPoisson <- nndist(pppPoisson)
+#Histogramme des distances calculées
+hist(nndPoisson)
+@
+\end{center}
+
+Plutôt que de travailler avec la densité des plus proches voisins comme représentée dans cet histogramme, il est possible d'utiliser la fonction de distribution cumulée \texttt{G(r)}, qui correspond à la probabilité de trouver un plus proche voisin dans une distance \texttt{r}.
+
+Il est possible d'estimer empiriquement \texttt{G} avec la fonction \texttt{Gest} ou ppp est un processus de points :
+<<rexample = FALSE, eval=FALSE>>=
+Gest(ppp)
+@
+
+De plus, comme pour le test du quadrant, l'on va pouvoir comparer cette probabilité observée ``` G ``` avec la probabilité théorique d'une distribution uniforme de Poisson que l'on peut calculer numériquement : 
+<<rexample = FALSE, eval=FALSE>>= 
+G(r) = 1 - exp( - lambda * pi * r ^ 2) 
+@
+https://www.rdocumentation.org/packages/spatstat/versions/1.63-3/topics/Gest
+
+
+\begin{center}
+<<fig=TRUE>>=
+#par(mfrow = c(3,1))
+# Estimer G(r) pour un processus de poisson
+Gpoisson <- Gest(pppPoisson)
+# Graphique de G(r) vs. r
+plot(Gpoisson)
+
+# Même chose pour le processus de Thomas
+nndThomas <- nndist(pppThomas)
+hist(nndThomas)
+Gthomas <- Gest(pppThomas)
+plot(Gthomas)
+@
+\end{center}
+
+\subsection{Données laticielles}
+
+Dans les premières parties de ce tutoriel, grâce à des processus de points l'on a pu déterminer des relations spatiales entre différents événements en fonction soit de leur position relative soit en fonction de leur distance les uns des autres. D'ou notamment les techniques du quadrant ou de distances vu plus haut. 
+
+Pour autant, en travaillant avec des données spatiales et plus seulement des points, l'on peut représenter ces relations de nombreuses façons.
+
+
+\subsubsection{Librairie spdep}
+La prochaine librairie abordée dans ce tutoriel sera la librairie "spdep" dont les fonctionnalités principales seront abordées un peu plus loin. Les exemples présentés ci-dessous sont tous disponibles à travers la librairie \texttt{geodaData} et peuvent être appelés de cette façon: 
+
+<<rexample = TRUE, eval=TRUE>>= 
+data("nom du jeu de données")
+@
+
+
+
+
+<<>>=
+if(!require(spdep)) install.packages("spdep",repos = "http://cran.us.r-project.org")
+if(!require(remotes)) install.packages("remotes",repos = "http://cran.us.r-project.org")
+remotes::install_github("spatialanalysis/geodaData")
+
+library(spdep)
+library(geodaData)
+data("ohio_lung")
+@
+
+
+Les données importées contenues dans le dataset ohio\_lung sont des données représentant le nombre de mort par cancer des poumons pour chaque
+comté de l'état de l'Ohio en 1968, 1978 et 1988.
+Ces données contiennent des données spatiales et l'on peut ainsi créer un nouvel objet pour les contenir avec la fonction:
+
+<<rexample = FALSE, eval=FALSE>>=
+as(dataset, 'Spatial')
+@
+
+\begin{center}
+<<fig=TRUE>>=
+ohio_lung.sp <- as(ohio_lung, 'Spatial')
+plot(ohio_lung.sp)
+@
+\end{center}
+
+L'on obtient ainsi une visualisation bien différente de celles dont on peut avoir l'habitude. Des polygones représentant l'état et les comtés sont automatiquement générés. 
+
+Malgré que l'on utilise maintenant des données spatiales, l'objectif des statistiques spatiales reste le même, l'on cherche toujours à déterminer si des données géographiquement proches tendent à être similaires en valeur.
+Comme on vient à utiliser ici des polygones, l'on peut s'intéresser aux relations entre les polygones adjacents d'une région.
+
+\subsubsection{Critères d'adjacence et matrices de poids spatiaux}
+
+Les critères d'adjacences sont abordés et expliqués plus en détails dans la section 3.3 de ce document. Leur implémentation en R sera présentée ici:
+
+La librairie \texttt{spdep} va nous permettre de facilement calculer des matrices de poids et d'identifier les régions adjacentes à l'aide des fonctions :
+
+<<rexample = FALSE, eval=FALSE>>=
+poly2nb(pl, queen=TRUE)
+@
+
+Qui va nous permettre d'identifier les polygones adjacents et qui utilise par défaut le critère Queen. Ainsi que :
+<<rexample = FALSE, eval=FALSE>>=
+nb2listw(neighbours)
+@
+Qui va calculer la matrice de poids et l'enregistrer dans une liste et qui prendre en entrée le résultat de la fonction \texttt{poly2nb}.
+\sepline
+https://www.rdocumentation.org/packages/spdep/versions/1.1-3/topics/poly2nb
+https://www.rdocumentation.org/packages/spdep/versions/1.1-3/topics/nb2listw
+
+<<>>=
+ohio_lung.nb <- poly2nb(pl = ohio_lung.sp, queen = TRUE)
+summary(ohio_lung.nb)
+ohio_lung.w <- nb2listw(ohio_lung.nb)
+@
+
+
+L'on a donc identifié tous les comtés adjacents sur notre carte de l'Ohio.
+\begin{center}
+<<fig=TRUE>>=
+plot(ohio_lung.sp, border = "gray")
+plot(ohio_lung.nb, coordinates(ohio_lung.sp), col = "red", add = TRUE)
+@
+\end{center}
+
+\subsubsection{Moyenne spatiale mobile et proximité}
+
+La moyenne spatiale mobile est une variation de la moyenne qui sera calculée en prenant en considération la matrice de poids que l'on a calculée plus tôt.
+Si l'on représente pour le moment le nombre de décès liés au cancer des poumons sur la carte que nous avons générée plus tôt, l'on peut remarquer certaines zones qui regroupent le plus de cas.
+
+\begin{center}
+<<fig=TRUE>>=
+ggplot(data = ohio_lung) +
+  geom_sf(aes(fill = cut_number(LM68, 8), ), 
+          color = "black") +
+  geom_sf(data = subset(ohio_lung, COUNTYID == 31),
+          color = "green") +
+  geom_sf(data = subset(ohio_lung, COUNTYID == 18), 
+          color = "green") +
+  scale_fill_brewer(palette = "YlOrRd") +
+  labs(fill = "Nombre de décès liés au cancer des poumons") +
+  coord_sf()
+@
+\end{center}
+
+L'on peut remarquer que la majorité des cas se regroupent en deux zones au sud-ouest et au nord-ouest de l'état. L'on peut identifier les deux comtés avec le plus grand nombre de cas en les entourant en vert, cela nous permettra d'identifier l'effet qu'aura notre prochaine transformation sur ces deux zones.
+
+La fonction \texttt{lag.listw} va nous permettre de calculer la moyenne spatiale mobile et prends ces paramètres :
+
+<<rexample = FALSE, eval=FALSE>>=
+lag.listw(weightMatrix, var)
+@
+
+<<>>=
+LM68.sma <- lag.listw(x = ohio_lung.w, ohio_lung$LM68)
+ohio_lung$LM68.sma <- LM68.sma
+@
+
+L'on peut maintenant reproduire la carte ajustée plus tôt mais en replaçant cette fois-ci le nombre de décès par la moyenne mobile que l'on vient de calculer.
+
+\begin{center}
+<<fig=TRUE>>=
+ggplot() +
+  geom_sf(data = ohio_lung,
+          aes(fill = cut_number(LM68.sma, 8)),
+          color = "black") +
+  geom_sf(data = subset(ohio_lung, COUNTYID == 31), 
+          color = "green") +
+  geom_sf(data = subset(ohio_lung, COUNTYID == 18), 
+          color = "green") +
+  scale_fill_brewer(palette = "YlOrRd") +
+  labs(fill = "Moyenne spatiale mobile nombre de décès") +
+  coord_sf()
+@
+\end{center}
+
+L'on remarque ainsi que ces nouvelles valeurs évoluent fortement, les deux comtés qui regroupaient le plus de cas influencent très fortement les comtés voisins. Alors que ces deux comtés présentent maintenant des valeurs plus faibles qu'auparavant, bien que toujours élevées. L'on pourrait faire l'hypothèse de la présence d'un facteur géographique qui influencerait le nombre de cas dans cette zone. L'on peut clairement voir une propagation en cercles concentriques autour du comté identifié au nord-est.
+
+\subsubsection{Autocorrélation spatiale et coefficient I de Moran}
+
+Comme nous venons de le voir, la moyenne spatiale mobile nous offre déjà une première représentation du phénomène d'autocorrélation spatiale, ce qui signifie que la valeur d'une variable n'est pas indépendante de la valeur de cette même variable dans les régions voisines.
+
+Le coefficient I de Moran est abordé et expliqué plus en détail dans la section 3.3 de ce document. Son implémentation en R sera présentée ici:
+
+Le package \texttt{spdep} va de plus nous permettre de calculer très facilement le coefficient grâce à la fonction ```moran``` qui prend comme paramètres :
+
+<<rexample = FALSE, eval=FALSE>>=
+moran(x, listw, n, S0)
+@
+
+Ou \texttt{x} est un vecteur numérique, \texttt{listw} est une liste créée par la fonction \texttt{nb2listw}, \texttt{n} est le nombre de "zones" considérées (le nombre de comtés dans notre exemple plus haut) et \texttt{S0} correspond à la somme globale des poids. 
+
+
+Les arguments \texttt{n} et \texttt{S0} peuvent sembler étranges puisque cette information est contenue dans l'objet \texttt{listw}, ils restent pour autant des arguments obligatoires.
+
+Il nous faut tout de même modifier la façon dont l'on va générer notre matrice de poids puisque la fonction de moran prend en entrée une liste et non une matrice. 
+Il nous suffit pour cela d'ajouter un argument à la fonction \texttt{nb2listw} pour générer des poids de distances binaires qui vérifient si les zones sont adjacentes et qui seront retournées dans une liste :
+
+<<>>=
+ohio_lung.bw <- nb2listw(ohio_lung.nb, style = 'B')
+@
+
+On peut ainsi calculer le coefficient I de Moran de cette façon :
+
+<<>>=
+moran(ohio_lung$LM68, ohio_lung.bw, n=length(ohio_lung.bw$neighbours), S0=Szero(ohio_lung.bw))
+@
+
+La valeur du coefficient I peut varier de -1 à 1, comme un coefficient de corrélation plus classique. La valeur que l'on obtient ici signifie donc l'absence d'autocorrélation spatiale, l'on retrouvait en effet deux comtés qui présentaient beaucoup plus de cas que tous les autres et venait influencer fortement les comtés voisins une fois que l'on calculait la moyenne spatiale mobile, mais à tort. 
+
+Là est toute l'importance du coefficient de Moran qui offre un test formel pour vérifier la présence d'autocorrélation spatiale.
+
+L'on peut en effet effectuer un test d'hypothèses à l'aide de la fonction \texttt{moran.test} qui prend comme paramètres :
+
+<<rexample = FALSE, eval=FALSE>>=
+moran.test(x, listw)
+@
+
+Ou \texttt{x} est un vecteur numérique, \texttt{listw} est une \textbf{matrice} créée par la fonction \texttt{nb2listw.}
+
+<<>>=
+moran.test(ohio_lung$LM68, ohio_lung.bw)
+@
+L'on retrouve donc la même valeur pour le coefficient I de Moran mais l'on obtient également une p-value qui est ici inférieure au seuil de 5\%. On ne peut donc pas rejeter notre hypothèse nulle qui implique que les valeurs sont le résultat d'une distribution spatiale complètement aléatoire. 
+
+Une meilleure pratique serait même d'utiliser une simulation Monte-Carlo afin d'effectuer ces tests. Les valeurs que l'on passe à la fonction seront assignées de façon aléatoire aux polygones et le coefficient I de Moran sera calculé. Cette procédure sera répétée n-fois afin d'établir une distribution des valeurs attendues. La valeur observée du coefficient est ensuite comparée à la distribution simulée afin de déterminer à quel point il est probable que ces valeurs soient aléatoires.
+
+Ce test est implémenté avec la fonction \texttt{moran.mc} qui prend comme paramètres:
+
+<<rexample = FALSE, eval=FALSE>>=
+moran.mc(x, listw, nsim=99)
+@
+
+Ou x est un vecteur numérique, listw est une matrice créée par la fonction nb2listw et nsim correspond au nombre de simulations, plus une, qui seront effectuées (on précise donc 99 ici afin d'en obtenir 100).
+
+<<>>=
+moran.mc(ohio_lung$LM68, ohio_lung.bw, nsim=99)
+@
+L'on obtient pour autant ici des résultats relativement semblables à ceux obtenus précédemment, l'on rejete toujours notre hypothèse nulle.
+
+\subsection{Données géospatiales}
+
+Pour cette partie du tutoriel, nous allons explorer l'interpolation des données géostatistiques continues à l'aide d'échantillons. Nous allons tenter de prédire et visualiser la concentration d'un polluant, le plomb, le long de la rivière Meuse aux Pays-Bas.
+
+Deux packages seront nécessaires, le package *sp*  qui facilite le stockage et la manipulation des données géostatistiques et le package *gstat* avec ses méthodes d'interpolation selon la méthode de krigeage.  
+
+<<>>=
+if(!require(gridExtra)) install.packages("gridExtra",repos = "http://cran.us.r-project.org")
+if(!require(sp)) install.packages("sp",repos = "http://cran.us.r-project.org")
+if(!require(gstat)) install.packages("gstat",repos = "http://cran.us.r-project.org")
+
+library(sp)
+library(gridExtra) # pour représenter plusieurs spplot ensemble
+library(gstat)
+data(meuse) # dans gstat
+@
+
+La région d'intérêt pour étude de pollution est le coude de la rivière Meuse. Meuse.riv est un objet matriciel que nous affichons avec la fonction de base de R, plot. 
+
+\begin{center}
+<<fig=TRUE>>=
+data(meuse.riv)
+meuse.riv <- meuse.riv[which(meuse.riv[,2] < 334200 & meuse.riv[,2] > 329400),]
+plot(meuse.riv, type = "l", asp = 1)
+@
+\end{center}
+
+Avant d'explorer notre jeu de données, nous transformons le dataframe "meuse" en dataframe spatiale (spdf). La fonction *coordinates* de *sp* prend les colonnes x et y pour cette opération. 
+
+<<>>=
+class(meuse) # meuse est initialement un dataframe
+coordinates(meuse)=~x+y #maintenant un spdf
+class(meuse) # meuse est maintenant un SpatialPointDataFrame et les colonnes X et Y sont dans un slot de l'objet spatial
+@
+
+Voici les statistiques principales de notre variable d'intérêt le plomb (en ppm).  Comme c'est une sortie d'un objet *sp*, *summary* sort des paramètres de base sur l'objet spatiale dont les valeurs min et maximum des coordonnées x et y, le type de projection et le nombre d'observations.
+
+<<>>=
+summary(meuse[c("lead")])
+@
+
+Pour visualiser, l'emplacement des 155 échantillons et leur concentration en plomb, nous faisons appel à *ssplot*, une fonction du package *sp*.
+
+\begin{center}
+<<fig=TRUE>>=
+spplot(meuse, "lead",  colorkey = TRUE, main = "concentrations en plomb (ppm)")
+@
+\end{center}
+
+Voici maintenant la surface sur laquelle nous allons faire l'interpolation (dataframe meuse.grid) que nous allons transformer également en objet spatial. Nous pouvons visualiser meuse.grid en vert à l'aide de *spplot*. Les points sont les sites d'échantillonnage. L'attribut *sp.layout* dans spplot permet de rajouter des couches au graphique.
+
+\begin{center}
+<<fig=TRUE>>=
+data(meuse.grid)
+coordinates(meuse.grid)=~x+y
+spplot(meuse["lead"], sp.layout = list(meuse.grid,col='green'))
+@
+\end{center}
+
+Après l'exploration et la visualisation des données, nous sommes à l'étape d'estimer la corrélation géographique de la concentration de plomb à l'aide du semi-variogramme. 
+
+Le semi-variogramme décrit la différence de concentration entre deux points en fonction de leur distance respective. Il suffit d'utiliser la fonction variogram de gstat. Le paramètre ~1 signifie que le type de krigeage sera "ordinaire" (constant). 
+Pour simplifier le modèle, nous supposons que la corrélation spatiale est isotropique (semblable dans toutes les directions).  Dans le cas de données minières il est typique de prendre le log de la variable d'intérêt parce que le résultat est plus stable et la forme est semblable.
+
+\begin{center}
+<<fig=TRUE>>=
+vgm1 = variogram(log(lead)~1, meuse)
+plot(vgm1)
+@
+\end{center}
+
+Maintenant, il s'agit de fitter les données du semi-variogramme avec un modèle (ie. estimer le modèle de corrélation). Par défaut 
+*fit.variogram* estime les presque tous les paramètres. On ne doit choisir que le type de courbe ici sphérique ("Sph").  Il est possible d'ajuster le modèle manuellement. Il faut alors utiliser la courbe du semi-variogramme pour estimer les paramètres (de *sill*, *range* et *nugget*). Le *sill* étant la valeur de y à son palier, *range* est la valeur de x au début du palier et *nugget* l'ordonnée à l'origine.
+
+\begin{center}
+<<fig=TRUE>>=
+vgm1.fit=fit.variogram(vgm1, vgm("Sph")) #fit.variogram modélise les données du variogramme expérimentale.
+plot(vgm1, vgm1.fit)
+@
+\end{center}
+
+La dernière étape est de faire l'interpolation des résultats (le krigeage) et d'estimer la variance. *grid.arrange* permet d'afficher les deux résultats dans deux colonnes différentes.
+
+\begin{center}
+<<fig=TRUE>>=
+vgm1.kriged = krige(log(zinc)~1, meuse, meuse.grid, model = vgm1.fit)
+
+grid.arrange (spplot(vgm1.kriged["var1.pred"], main="interpolation (krig. ordinaire)"),
+              spplot(vgm1.kriged["var1.var"], main="variance (krig. ordinaire)"), ncol = 2)
+@
+\end{center}
+
+Si on suppose, que c'est la rivière qui charrie les polluants comme le plomb alors la distance entre la rivière et un emplacement de la carte est un facteur important. Dans ce cas, on veut faire du krigeage "universel" (en fonction d'une autre variable). Il suffit donc de substituer le "1" du krigeage "ordinaire" pour le facteur "dist" (distance entre la rivière et un point précis). On refait refit le variogramme, puis on refait l'interpolation pour avoir un résultat final.
+
+\begin{center}
+<<fig=TRUE>>=
+vgm2 = variogram(log(lead)~dist, meuse)
+vgm2.fit=fit.variogram(vgm2, vgm("Sph")) #fit.variogram modélise les données du variogramme expérimentale.
+plot(vgm2, vgm2.fit)
+@
+
+<<fig=TRUE>>=
+vgm2.kriged = krige(log(zinc)~dist, meuse, meuse.grid, model = vgm2.fit)
+grid.arrange (spplot(vgm2.kriged["var1.pred"], main="interpolation (krig. universel)"),
+              spplot(vgm2.kriged["var1.var"], main="variance (krig. universel)"), ncol = 2)
+@
+\end{center}
+
+\section{Bibliographie}
+\begin{spverbatim}
+
+- Adler, Jessie (s.d.) "intro-to-r/gis-with-R-intro.Rmd" . Récupéré de 
+https://github.com/jessesadler/intro-to-r/blob/master/gis-with-r-intro.Rmd
+
+- ArcGIS (s.d.) "Understanding geostatistical analysis". Récupéré de  
+https://desktop.arcgis.com/en/arcmap/latest/extensions/geostatistical-analyst
+/understanding-geostatistical-analysis.htm
+
+- Baillargeon, Sophie (2005)  "Le krigeage : revue de la théorie et application à l'interpolation spatiale de données de précipitations",  Mémoire présenté à l'Université Laval.  Récupéré de  
+https://www.mat.ulaval.ca/fileadmin/mat/documents/lrivest/EtudesGraduees/SBaillargeon.pdf
+
+- Bivand, Roger (2020-03-09) "CRAN Task View: Analysis of Spatial Data". Récupéré de 
+https://cran.r-project.org/web/views/Spatial.html
+
+- Bivand, Roger, Edzer Pebesma, Virgilio Gomez-Rubio (2005 ) "Applied Spatial Data Analysis With R ", Springer 
+
+- Choi, Mona (2013) "Book review : Spatial Analysis of Epidemiology". Récupéré de 
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3717438/ 
+
+- Cressie, Noel 1993 "Statistics for Spatial Data, Revised Edition", Wiley & Sons 
+
+- Dale, Mark R. T., Marie‐Josée Fortin (2014) "Spatial Analysis: A Guide For Ecologists by, 2nd edition" Cambridge University Press, p. 450 
+
+- De Smith, Michael, Michael Goodchild, Paul Longley (2018) "Geospatial Analysis - 6th edition, 2018", The Winchelsea Press. 
+
+- De Smith, Michael, Michael Goodchild, Paul Longley (2020) "Geospatial Analysis 6th Edition, 2020 update". Récupéré de 
+https://www.spatialanalysisonline.com/HTML/index.html
+
+- Elsvier (2020) "Journal of Spatial Statistic Author Information Pack 20 Mar 2020". Récupéré de 
+https://www.elsevier.com/journals/spatial-statistics/2211-6753?generatepdf=true
+
+- ESRI (s.d.) "History of GIS" , Récupéré de 
+https://www.esri.com/en-us/what-is-gis/history-of-gis
+
+- Gabriel, Edith (2010) "Introduction à la statistique spatiale",42èmes Journées de Statistique, Marseille,
+France. Récupéré de https://hal.inria.fr/inria-00494770/document 
+
+- Gelfand, Alan, Peter Diggle, Peter Guttorp, Fuentes Montserrat (2010) "Handbook of Spatial Statistics", CRC Press, 619 p.
+
+- Getis, A. $(s.d.)$ "Spatial Statistics". Récupéré de 
+https://www.geos.ed.ac.uk/~gisteac/gis_book_abridged/files/ch16.pdf  
+
+- Gimond, Manuel (2019) "Chapter 11 Point Pattern Analysis" dans "Intro to GIS and Spatial Analysis". Récupéré de 
+https://mgimond.github.io/Spatial/point-pattern-analysis.html
+
+- GISGeography (s.d.) "Kriging Interpolation – The Prediction Is Strong in this One" Récupé de 
+https://gisgeography.com/kriging-interpolation-prediction/
+
+- Karpatne, Anuj at al (2017) "Machine Learning for the Geosciences: Challenges and Opportunities". Récupéré de 
+https://arxiv.org/pdf/1711.04708.pdf
+
+- Lovelace, Robin, Jakub Nowosad, Jannes Muenchow (2020) «Geocomputation with R" . Récupéré de 
+://geocompr.robinlovelace.net/
+
+- Maxwell, Aaron ( s.d.) "Semivariogram Explained". Récupéré de 
+https://www.youtube.com/watch?v=L-hnxGq74q0
+
+- Moat, Justin (2015) "Book review : Spatial Analysis: A Guide For Ecologists by, 2nd edition", Linnean Society Botanical  Journal, vol. 179, issue 3, p. 550. 
+
+- Pfeiffer D, Robinson T, Stevenson M, Stevens K, Rogers D. Clements (2008) 
+"Spatial analysis in epidemiology". Oxford, Oxford University Press.
+
+- Smith, T.E., (2020) "Overview of Areal Data Analysis" dans "Notebook on Spatial Data Analysis". Récupéré de 
+https://www.seas.upenn.edu/~ese502/NOTEBOOK/Part_III/1_Overview_of_Areal_Data_Analysis.pdf
+
+- Smith, T.E., (2020) Notebook on Spatial Data Analysis. Récupéré de 
+http://www.seas.upenn.edu/~ese502/#notebook https://www.seas.upenn.edu/~ese502/#notebook
+
+- Souris, Marc, Laurence Bichaud (2011) " Statistical methods for bivariate spatial analysis in marked points. Examples in spatial epidemiology"  Elsevier Journal of Spatial and Spatio-temporal Epidemiology, vol.2  p. 227-234. 
+\end{spverbatim}
+
+
+
+
+
+\end{document}
+
+
+
+
